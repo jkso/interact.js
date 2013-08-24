@@ -37,6 +37,8 @@ var document      = window.document,
     clientX0 = 0,
     clientY0 = 0,
 
+    prevMoveEvent = null,
+
     gesture = {
         start: { x: 0, y: 0 },
 
@@ -96,7 +98,15 @@ var document      = window.document,
             elementTypes: /^container$/,
             numberTypes : /^range$|^interval$|^distance$/
         },
-        autoScrollEnabled: true
+        autoScrollEnabled: true,
+
+        inertia: {
+            frame    : window,  // the element the interactable must remain within
+            threshold: 60,
+            interval : 20,      // pause in ms between each movement
+            falloff  : 'linear',// the distance in x and y that the page is scrolled
+        },
+        inertiaEnabled: true
     },
 
     snapStatus = {
@@ -816,6 +826,17 @@ var document      = window.document,
             this.dy = page.y - prevY;
         }
 
+        if (action ==='drag' && phase === 'end') {
+            var dt = this.timeStamp - prevMoveEvent.timeStamp,
+                dx = page.x - prevX,
+                dy = page.y - prevY;
+
+            this.distance = Math.sqrt(dx * dx + dy * dy);
+            this.velocity = this.distance / dt;
+
+            console.log(this.distance, dt, this.velocity);
+        }
+
         if (action === 'resize') {
             if (options.squareResize || event.shiftKey) {
                 if (resizeAxes === 'y') {
@@ -1007,6 +1028,8 @@ var document      = window.document,
                 pointerWasMoved = true;
             }
             if (prepared && target) {
+                prevMoveEvent = event;
+
                 if (target.options.snapEnabled === null
                     ? defaultOptions.snapEnabled
                     : target.options.snapEnabled) {
@@ -1179,6 +1202,7 @@ var document      = window.document,
         }
 
         target.fire(dragEvent);
+        prevMoveEvent = dragEvent;
 
         if (dragLeaveEvent) {
             leaveDropTarget.fire(dragLeaveEvent);
